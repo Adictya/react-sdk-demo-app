@@ -1,0 +1,73 @@
+#!/bin/node
+
+const child = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+const AB_DIRECTORY = process.argv[2];
+
+if (!AB_DIRECTORY) {
+  console.log("no argument provided");
+  console.log("call with app builder project directory");
+  process.exit();
+}
+
+console.log("working with ", AB_DIRECTORY);
+
+console.log("=================================");
+console.log("==========  REACT_SDK   =========");
+console.log("=================================");
+
+console.log("building react sdk ");
+child.execSync("npm run react-sdk", {
+  cwd: path.join(AB_DIRECTORY, "template"),
+});
+
+console.log("looking for tgz file");
+const files = fs
+  .readdirSync(path.join(AB_DIRECTORY, "Builds", "react-sdk"))
+  .filter((fn) => fn.endsWith(".tgz"));
+
+if (files.length < 1) {
+  console.log("build failed no tgz file found");
+  process.exit();
+}
+
+console.log("found tgz file", files[0]);
+
+console.log(
+  "installing tgz file",
+  path.join(AB_DIRECTORY, "Builds", "react-sdk", files[0])
+);
+
+child.execSync(
+  `npm install ${path.join(
+    AB_DIRECTORY,
+    "Builds",
+    "react-sdk",
+    files[0]
+  )} --force`,
+  {
+    cwd: path.join(__dirname),
+  }
+);
+
+console.log("starting react-sample-app server at http://localhost:5173");
+
+const reactServer = child.exec(
+  `npm run start `,
+  {
+    cwd: path.join(__dirname),
+  },
+  (err) => {}
+);
+
+reactServer.on("message", (data) => {
+  console.log("React server");
+  console.log(data);
+});
+
+reactServer.on("error", (data) => {
+  console.log("React server error");
+  console.log(data);
+});
